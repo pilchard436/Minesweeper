@@ -1,4 +1,5 @@
 import random
+from multipledispatch import dispatch
 
 from piece import piece
 
@@ -28,8 +29,13 @@ class board:
     def getSize(self):
         return self.dim[0] * self.dim[1]
     
+    @dispatch(list)
     def getPiece(self, index: list[int]):
         return self.board[index[0]][index[1]]
+
+    @dispatch(int, int)
+    def getPiece(self, row: int, col: int):
+        return self.board[row][col]
 
     def setBoard(self):
         '''
@@ -67,7 +73,7 @@ class board:
                             continue
                         if (row < 0 or row > self.dim[0] - 1) or (col < 0 or col > self.dim[1] - 1):
                             continue
-                        piece.neighbors.append(self.getPiece([row, col]))
+                        piece.neighbors.append(self.getPiece(row, col))
                 
 
     def setAround(self): 
@@ -76,7 +82,7 @@ class board:
         '''
         for row in range(self.dim[0]):
             for col in range(self.dim[1]):
-                self.getPiece([row, col]).setAround()
+                self.getPiece(row, col).setAround()
                 
     def click(self, piece: piece, rightclick):
         if piece.clicked or (piece.flagged and not rightclick):
