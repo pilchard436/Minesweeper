@@ -1,3 +1,4 @@
+from multipledispatch.dispatcher import warning_text
 import pygame
 from pygame_textinput import *
 import os
@@ -15,6 +16,7 @@ OFFSETHEIGHT = MENUHEIGHT + INFOHEIGHT
 MENUBUTTONWIDTH = 90
 
 MAXSIZE = (16, 30)
+
 
 class minesweeper:
     def __init__(self, dim: list, num_mine: int) -> None:
@@ -59,7 +61,7 @@ class minesweeper:
         # Initialize option menu
         # Set font
         font = pygame.font.Font('freesansbold.ttf', 16)
-        # Make 3 text entry boxes. Row and col can only be <= 50
+        # Make 3 text entry boxes.
         rowManager = TextInputManager(initial=str(self.dim[0]), validator=lambda input: (
             input.isdigit() and int(input) <= MAXSIZE[0]) or input == "")
         colManager = TextInputManager(initial=str(self.dim[1]), validator=lambda input: (
@@ -74,6 +76,7 @@ class minesweeper:
         pygame.key.set_repeat(200, 25)
 
         textboxSelect = 0
+        warning = False
 
         while True:
             self.screen.fill((255, 255, 255))
@@ -110,6 +113,12 @@ class minesweeper:
             pygame.draw.rect(self.screen, (0, 0, 128), cancelButton)
             self.displayText(font, "Cancel", (self.sizeScreen[0] / 2 + MENUBUTTONWIDTH / 2 - font.size(
                 "Cancel")[0] / 2, self.sizeScreen[1] - 100), (255, 255, 255))
+            
+            # Whether to display warning that mine count cannot exceed board dimention
+            if warning:
+                warningText = "Too many mines!"
+                self.displayText(font, warningText, (self.sizeScreen[0] / 2 - font.size(
+                warningText)[0] / 2, self.sizeScreen[1] - 100 - font.size(warningText)[1]), (255, 0, 0))
 
             # Determine which textbox to enter
             events = pygame.event.get()
@@ -148,9 +157,13 @@ class minesweeper:
                     if textboxSelect < 2:
                         textboxSelect += 1
                 elif (event.type == pygame.MOUSEBUTTONDOWN and okButton.collidepoint(pygame.mouse.get_pos())) or (event.type == pygame.KEYDOWN and event.key == K_RETURN):
-                    self.dim = [int(rowInput.value), int(colInput.value)]
-                    self.num_mine = int(mineInput.value)
-                    return True
+                    if int(mineInput.value) < int(rowInput.value) * int(colInput.value):
+                        self.dim = [int(rowInput.value), int(colInput.value)]
+                        self.num_mine = int(mineInput.value)
+                        warning = False
+                        return True
+                    else: 
+                        warning = True
 
             pygame.display.update()
 
@@ -168,20 +181,22 @@ class minesweeper:
             self.images[fileName.split(".")[0]] = img
 
     def state1(self):
+        # Setting screen size, load assets, go to state 2
         while True:
-            print("state 1")
+            # print("state 1")
             self.screen = pygame.display.set_mode(self.sizeScreen)
             pygame.display.set_caption('Minesweeper')
             self.loadPictures()
             self.state2()
 
     def state2(self):
-        print("state 2")
+        # Display a static picture of the board, the actual board is not generated until player clicks on one piece
+        # print("state 2")
         menuFont = pygame.font.Font('freesansbold.ttf', 16)
         infoFont = pygame.font.Font('freesansbold.ttf', 50)
         self.optionButton = pygame.Rect((0, 0), (MENUBUTTONWIDTH, MENUHEIGHT))
         self.restartButton = pygame.Rect(
-                (MENUBUTTONWIDTH, 0), (MENUBUTTONWIDTH, MENUHEIGHT))
+            (MENUBUTTONWIDTH, 0), (MENUBUTTONWIDTH, MENUHEIGHT))
         restart = False
         while not restart:
             self.screen.fill((255, 255, 255))
@@ -189,30 +204,30 @@ class minesweeper:
             # Display Option Button + text "Option"
             pygame.draw.rect(self.screen, (255, 0, 0), self.optionButton)
             self.displayText(menuFont, "Option", (MENUBUTTONWIDTH /
-                            2 - menuFont.size("Option")[0] / 2, 0), (255, 255, 255))
+                                                  2 - menuFont.size("Option")[0] / 2, 0), (255, 255, 255))
 
             # Display Option Button + text "Option"
             pygame.draw.rect(self.screen, (0, 0, 128), self.restartButton)
             self.displayText(menuFont, "Restart", (3 * MENUBUTTONWIDTH /
-                            2 - menuFont.size("Restart")[0] / 2, 0), (255, 255, 255))
+                                                   2 - menuFont.size("Restart")[0] / 2, 0), (255, 255, 255))
 
             # Display remaining mine count
-            self.displayText(infoFont, str(self.num_mine), (10, MENUHEIGHT + 5))
+            self.displayText(infoFont, str(self.num_mine),
+                             (10, MENUHEIGHT + 5))
 
             # Display timer
             self.displayText(infoFont, str(0),
-                            (self.sizeScreen[0] - infoFont.size(str(0))[0] - 10, MENUHEIGHT + 5))
+                             (self.sizeScreen[0] - infoFont.size(str(0))[0] - 10, MENUHEIGHT + 5))
 
+            # Display static picture of board with empty blocks
             topLeft = (0, OFFSETHEIGHT)
-
-            # Draw empty blocks
             for i in range(self.dim[0]):
                 for j in range(self.dim[1]):
                     image = self.images["empty-block"]
                     self.screen.blit(image, topLeft)
                     topLeft = topLeft[0] + self.pieceSize[0], topLeft[1]
                 topLeft = (0, topLeft[1] + self.pieceSize[1])
-                
+
             for event in pygame.event.get():
                 if event.type == pygame.QUIT:
                     pygame.quit()
@@ -221,31 +236,33 @@ class minesweeper:
                     restart = self.options()
                 elif event.type == pygame.MOUSEBUTTONDOWN and pygame.mouse.get_pos()[1] > OFFSETHEIGHT:
                     # Figure out which piece the player clicked, generate board, click that piece, start the game
-                    pos = pygame.mouse.get_pos()
-                    row = int((pos[1] - OFFSETHEIGHT) // self.pieceSize[1])
-                    col = int(pos[0] // self.pieceSize[0])
+                    mousePos = pygame.mouse.get_pos()
+                    row = int((mousePos[1] - OFFSETHEIGHT) //
+                              self.pieceSize[1])
+                    col = int(mousePos[0] // self.pieceSize[0])
                     self.board = board(self.dim, self.num_mine, (row, col))
-                    self.clickPiece(pygame.mouse.get_pos(), False)
+                    self.clickPiece(mousePos, False)
                     self.startTime = time.time()
                     self.running()
                     restart = True
             pygame.display.update()
 
     def running(self):
-        print("state running")
+        # print("state running")
         self.isRunning = True
         restart = False
         while not restart:
+            mousePos = pygame.mouse.get_pos()
             for event in pygame.event.get():
                 if event.type == pygame.QUIT:
                     pygame.quit()
                     quit()
-                if event.type == pygame.MOUSEBUTTONDOWN and not (self.board.hasWon or self.board.hasLost) and pygame.mouse.get_pos()[1] > OFFSETHEIGHT:
+                if event.type == pygame.MOUSEBUTTONDOWN and not (self.board.hasWon or self.board.hasLost) and mousePos[1] > OFFSETHEIGHT:
                     rightClick = pygame.mouse.get_pressed(num_buttons=3)[2]
-                    self.clickPiece(pygame.mouse.get_pos(), rightClick)
-                elif event.type == pygame.MOUSEBUTTONDOWN and self.optionButton.collidepoint(pygame.mouse.get_pos()):
+                    self.clickPiece(mousePos, rightClick)
+                elif event.type == pygame.MOUSEBUTTONDOWN and self.optionButton.collidepoint(mousePos):
                     restart = self.options()
-                elif event.type == pygame.MOUSEBUTTONDOWN and self.restartButton.collidepoint(pygame.mouse.get_pos()):
+                elif event.type == pygame.MOUSEBUTTONDOWN and self.restartButton.collidepoint(mousePos):
                     restart = True
 
             self.drawGame()  # Display game
@@ -262,18 +279,18 @@ class minesweeper:
                 self.state4()
                 restart = True
 
-
     def state4(self):
-        print("state 4")
+        # print("state 4")
         restart = False
         while not restart:
+            mousePos = pygame.mouse.get_pos()
             for event in pygame.event.get():
                 if event.type == pygame.QUIT:
                     pygame.quit()
                     quit()
-                elif event.type == pygame.MOUSEBUTTONDOWN and self.optionButton.collidepoint(pygame.mouse.get_pos()):
+                elif event.type == pygame.MOUSEBUTTONDOWN and self.optionButton.collidepoint(mousePos):
                     restart = self.options()
-                elif event.type == pygame.MOUSEBUTTONDOWN and self.restartButton.collidepoint(pygame.mouse.get_pos()):
+                elif event.type == pygame.MOUSEBUTTONDOWN and self.restartButton.collidepoint(mousePos):
                     restart = True
 
             self.drawGame()  # Display game
@@ -305,6 +322,15 @@ class minesweeper:
         timeElapsed = str(self.timer)
         self.displayText(infoFont, timeElapsed,
                          (self.sizeScreen[0] - infoFont.size(timeElapsed)[0] - 10, MENUHEIGHT + 5))
+
+        # Display whether the game is won or is lost or neither (display nothing)
+        state = ""
+        if self.board.hasWon:
+            state += "You won!"
+        elif self.board.hasLost:
+            state += "You lost!"
+        self.displayText(menuFont, state,
+                         (self.sizeScreen[0] / 2 - menuFont.size(state)[0] / 2, MENUHEIGHT + INFOHEIGHT / 2 - menuFont.size(state)[1] / 2))
 
         topLeft = (0, OFFSETHEIGHT)
         for row in self.board.board:
@@ -342,10 +368,10 @@ class minesweeper:
         self.board.click(piece, rightclick)
 
     def win(self):
-        print("You won!")
+        pass
 
     def lost(self):
-        print("You lost!")
+        pass
 
 
 class recursionlimit:

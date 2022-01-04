@@ -1,4 +1,5 @@
 import random
+import time
 from multipledispatch import dispatch
 
 from piece import piece
@@ -17,6 +18,7 @@ class board:
         self.hasLost = False
         self.flagCount = 0
 
+        # This should never trigger
         if self.num_mine >= self.size:
             raise Exception("The number of mines cannot be bigger than the board size")
             
@@ -66,7 +68,7 @@ class board:
 
         # first piece cannot be a mine
         templist.remove(self.first)
-
+        random.seed(time.time())
         minePosList = random.sample(templist, self.num_mine)
         for minePos in minePosList:
             self.getPiece(minePos).isMine = True
