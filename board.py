@@ -4,18 +4,20 @@ from multipledispatch import dispatch
 from piece import piece
 
 class board:
-    def __init__(self, dim: list, num_mine: int) -> None:
+    def __init__(self, dim: list, num_mine: int, first: tuple[int, int]) -> None:
         '''
         "dim" is a list of 2 int. Ex: board([10, 10], 20) generates a 10x10 board with 20 mines. 
         '''
         self.dim = dim
         self.num_mine = num_mine
+        self.first = first
         self.board : list[list[piece]] = list()
         self.size = self.getSize()
         self.hasWon = False
         self.hasLost = False
+        self.flagCount = 0
 
-        if self.num_mine > self.size:
+        if self.num_mine >= self.size:
             raise Exception("The number of mines cannot be bigger than the board size")
             
         self.setBoard()
@@ -26,11 +28,15 @@ class board:
     def __str__(self) -> str:
         return str('\n'.join([''.join(['{:4}'.format(str(piece)) for piece in row]) for row in self.board]))
 
+    @property
+    def remainingMine(self):
+        return self.num_mine - self.flagCount
+
     def getSize(self):
         return self.dim[0] * self.dim[1]
     
-    @dispatch(list)
-    def getPiece(self, index: list[int]):
+    @dispatch(tuple)
+    def getPiece(self, index: tuple[int, int]):
         return self.board[index[0]][index[1]]
 
     @dispatch(int, int)
@@ -56,7 +62,11 @@ class board:
         templist = []
         for i in range(self.dim[0]):
             for j in range(self.dim[1]):
-                templist.append([i,j])
+                templist.append((i,j))
+
+        # first piece cannot be a mine
+        templist.remove(self.first)
+
         minePosList = random.sample(templist, self.num_mine)
         for minePos in minePosList:
             self.getPiece(minePos).isMine = True
@@ -88,7 +98,10 @@ class board:
         if piece.clicked or (piece.flagged and not rightclick):
             return
         if rightclick:
-            piece.toggleFlag()
+            if piece.toggleFlag():
+                self.flagCount += 1  
+            else:
+                self.flagCount -= 1
             self.hasWon = self.checkWin()
             return
         else:

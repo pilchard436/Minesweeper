@@ -11,6 +11,7 @@ class piece:
 
     def toggleFlag(self):
         self.flagged = not self.flagged
+        return self.flagged
 
     def handleClick(self):
         self.clicked = True
