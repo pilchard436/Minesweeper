@@ -3,7 +3,7 @@ from pygame_textinput import *
 import os
 import sys
 
-from pygame.constants import K_DOWN, K_ESCAPE, K_UP
+from pygame.constants import K_DOWN, K_ESCAPE, K_UP, K_RETURN
 
 from board import board
 from piece import piece
@@ -103,14 +103,28 @@ class minesweeper:
                 if (event.type == pygame.KEYDOWN and event.key == K_ESCAPE) or (event.type == pygame.MOUSEBUTTONDOWN and cancelButton.collidepoint(pygame.mouse.get_pos())):
                     running = False
                     return False
+
                 # Logic for changing which textbox to enter
                 elif event.type == pygame.KEYDOWN and event.key == K_UP:
+
+                    # Disable cursor display for all 3 textboxes
+                    rowInput.cursor_visible = False 
+                    colInput.cursor_visible = False 
+                    mineInput.cursor_visible = False 
+
                     if textboxSelect > 0:
                         textboxSelect -= 1
+
                 elif event.type == pygame.KEYDOWN and event.key == K_DOWN:
+                    
+                    # Disable cursor display for all 3 textboxes
+                    rowInput.cursor_visible = False 
+                    colInput.cursor_visible = False 
+                    mineInput.cursor_visible = False 
+
                     if textboxSelect < 2:
                         textboxSelect += 1
-                elif event.type == pygame.MOUSEBUTTONDOWN and okButton.collidepoint(pygame.mouse.get_pos()):
+                elif (event.type == pygame.MOUSEBUTTONDOWN and okButton.collidepoint(pygame.mouse.get_pos())) or (event.type == pygame.KEYDOWN and event.key == K_RETURN):
                     self.dim = [int(rowInput.value), int(colInput.value)]
                     self.num_mine= int(mineInput.value)
                     running = False
